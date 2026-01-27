@@ -40,45 +40,6 @@ A comprehensive IntelliJ IDEA plugin providing syntax highlighting and language 
 3. Select the downloaded `.zip` file
 4. Restart the IDE
 
-## Supported Keywords
-
-### Pipeline Structure
-- `pipeline`, `stages`, `stage`, `steps`
-- `parallel`, `matrix`, `sequential`
-
-### Sections
-- `agent`, `environment`, `options`, `parameters`
-- `triggers`, `post`, `tools`, `input`, `script`
-
-### Build Steps
-- **Shell**: `sh`, `bat`, `powershell`, `pwsh`
-- **Output**: `echo`, `println`, `print`
-- **SCM**: `checkout`, `scm`, `git`
-- **Jenkins Actions**: `sleep`, `waitUntil`, `build`, `input`
-- **Error Handling**: `catchError`, `error`, `warnError`
-- **Artifacts**: `stash`, `unstash`, `archiveArtifacts`
-- **Testing**: `junit`, `publishHTML`
-- **File Operations**: `deleteDir`, `fileExists`, `readFile`, `writeFile`, `dir`, `pwd`
-- **Notifications**: `mail`, `emailext`, `slackSend`
-- **Wrappers**: `withEnv`, `withCredentials`, `withAWS`, `withKubeConfig`
-- **Docker**: `docker`, `dockerNode`, `dockerFingerprintFrom`
-- **Other**: `node`, `ws`, `load`, `library`, `timestamp`, `isUnix`
-
-### Post Conditions
-- `always`, `changed`, `fixed`, `regression`
-- `aborted`, `failure`, `success`, `unstable`, `unsuccessful`, `cleanup`
-
-### When Conditions
-- `when`, `branch`, `buildingTag`, `changelog`, `changeset`
-- `changeRequest`, `equals`, `expression`, `tag`
-- `not`, `allOf`, `anyOf`, `triggeredBy`
-
-### Groovy Keywords
-- `def`, `var`, `return`, `if`, `else`, `for`, `while`
-- `try`, `catch`, `finally`, `throw`
-- `import`, `package`, `class`, `interface`
-- `new`, `this`, `super`, `instanceof`, `in`, `as`
-
 ## Compatibility
 
 - **IntelliJ IDEA**: 2024.1+
