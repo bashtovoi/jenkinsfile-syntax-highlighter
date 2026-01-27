@@ -4,7 +4,7 @@ This directory contains GitHub Actions workflows for the Jenkinsfile Plugin.
 
 ## Workflows
 
-### 1. Build Plugin (`build.yml`)
+### 1. Build (`build.yml`)
 
 **Triggers:**
 - Pull requests to `main` or `develop` branches
@@ -22,7 +22,7 @@ This workflow runs automatically on every PR. You don't need to do anything manu
 
 ---
 
-### 2. Release Plugin (`release.yml`)
+### 2. Release (`release.yml`)
 
 **Triggers:**
 - Push of version tags (e.g., `v1.0.0`, `v1.2.3`)
