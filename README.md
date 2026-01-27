@@ -1,8 +1,8 @@
 # Jenkinsfile Syntax Highlighter
 
-![Build](https://img.shields.io/badge/build-passing-brightgreen)
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+[![Build](https://github.com/bashtovoi/jenkinsfile-syntax-highlighter/actions/workflows/build.yml/badge.svg)](https://github.com/bashtovoi/jenkinsfile-syntax-highlighter/actions/workflows/build.yml)
+[![Release](https://github.com/bashtovoi/jenkinsfile-syntax-highlighter/actions/workflows/release.yml/badge.svg)](https://github.com/bashtovoi/jenkinsfile-syntax-highlighter/actions/workflows/release.yml)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 A comprehensive IntelliJ IDEA plugin providing syntax highlighting and language support for Jenkinsfile (Jenkins Pipeline) files.
 
@@ -84,7 +84,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE.md) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Support
 
