@@ -181,16 +181,3 @@ jobs:
           generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish to JetBrains Marketplace
-        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
-        env:
-          PUBLISH_TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
-        run: |
-          if [ -n "$PUBLISH_TOKEN" ]; then
-            echo "Publishing to JetBrains Marketplace..."
-            ./gradlew publishPlugin
-          else
-            echo "⚠️  JETBRAINS_MARKETPLACE_TOKEN not set, skipping marketplace publish"
-            echo "To publish to JetBrains Marketplace, add JETBRAINS_MARKETPLACE_TOKEN to repository secrets"
-          fi
