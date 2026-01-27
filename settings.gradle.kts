@@ -1,1 +1,1 @@
-rootProject.name = "jenkins-plugin"
+rootProject.name = "jenkinsfile-syntax-highlighter"
