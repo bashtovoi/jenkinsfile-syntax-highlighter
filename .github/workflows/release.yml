@@ -70,6 +70,14 @@ jobs:
 
           echo "Generating release notes from $PREVIOUS_TAG to ${{ github.ref_name }}"
 
+          # Count commits
+          COMMIT_COUNT=$(git log $PREVIOUS_TAG..${{ github.ref_name }} --oneline | wc -l)
+          echo "Found $COMMIT_COUNT commits"
+
+          if [ "$COMMIT_COUNT" -eq 0 ]; then
+            echo "Warning: No commits found between $PREVIOUS_TAG and ${{ github.ref_name }}"
+          fi
+
           # Initialize release notes file
           cat > release_notes.md << 'EOF'
           ## What's Changed
@@ -96,7 +104,7 @@ jobs:
           done
 
           # Parse commits and categorize them
-          git log $PREVIOUS_TAG..${{ github.ref_name }} --pretty=format:"%s|||%h|||%an" | while IFS='|||' read -r message hash author; do
+          while IFS='|||' read -r message hash author; do
             # Extract conventional commit type
             if [[ $message =~ ^([a-z]+)(\(.+\))?:\ (.+)$ ]]; then
               type="${BASH_REMATCH[1]}"
@@ -115,11 +123,13 @@ jobs:
               # Not a conventional commit, put in other
               echo "- $message ($hash)" >> /tmp/commits_other.txt
             fi
-          done
+          done < <(git log $PREVIOUS_TAG..${{ github.ref_name }} --pretty=format:"%s|||%h|||%an")
 
           # Append categorized commits to release notes
+          HAS_COMMITS=false
           for key in feat fix docs style refactor perf test build ci chore other; do
             if [ -s /tmp/commits_$key.txt ]; then
+              HAS_COMMITS=true
               echo "" >> release_notes.md
               echo "${categories[$key]}" >> release_notes.md
               echo "" >> release_notes.md
@@ -127,13 +137,20 @@ jobs:
             fi
           done
 
+          # Add message if no commits found
+          if [ "$HAS_COMMITS" = false ]; then
+            echo "" >> release_notes.md
+            echo "No categorized changes in this release." >> release_notes.md
+            echo "" >> release_notes.md
+          fi
+
           # Add contributors
           echo "" >> release_notes.md
           echo "### 👥 Contributors" >> release_notes.md
           echo "" >> release_notes.md
-          git log $PREVIOUS_TAG..${{ github.ref_name }} --pretty=format:"%an" | sort -u | while read author; do
+          while read author; do
             echo "- $author" >> release_notes.md
-          done
+          done < <(git log $PREVIOUS_TAG..${{ github.ref_name }} --pretty=format:"%an" | sort -u)
 
           # Add installation instructions
           cat >> release_notes.md << 'EOF'
