@@ -1,0 +1,111 @@
+// Test file for new keyword highlighting
+pipeline {
+    agent any
+
+    environment {
+        VERSION = '1.0.0'
+    }
+
+    stages {
+        stage('Build') {
+            steps {
+                script {
+                    // Groovy keywords - def, if, else, for, return
+                    def buildNumber = env.BUILD_NUMBER
+                    def isMainBranch = env.BRANCH_NAME == 'main'
+
+                    if (isMainBranch) {
+                        echo "Building main branch"
+                    } else {
+                        echo "Building feature branch"
+                    }
+
+                    for (int i = 0; i < 3; i++) {
+                        echo "Iteration: ${i}"
+                    }
+
+                    // New shell commands - sh, bat, powershell
+                    sh 'echo "Running shell command"'
+                    sh 'ls -la'
+                    sh '''
+                        echo "Multi-line shell"
+                        pwd
+                        ls -l
+                    '''
+
+                    // File operations
+                    def fileExists = fileExists('Jenkinsfile')
+                    if (fileExists) {
+                        def content = readFile('README.md')
+                        println content
+                    }
+
+                    // More Groovy keywords
+                    try {
+                        def result = build job: 'other-job'
+                        return result.number
+                    } catch (Exception e) {
+                        error "Build failed: ${e.message}"
+                    } finally {
+                        echo "Cleanup"
+                    }
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                // Print statements
+                echo 'Running tests'
+                println 'Test execution started'
+                print 'Debug: '
+
+                // Shell commands
+                sh 'npm test'
+                bat 'dir'  // Windows batch
+                powershell 'Get-ChildItem'
+
+                // File operations
+                dir('subdir') {
+                    pwd()
+                    deleteDir()
+                }
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                branch 'main'
+            }
+            steps {
+                script {
+                    def environments = ['dev', 'staging', 'prod']
+
+                    for (env in environments) {
+                        echo "Deploying to ${env}"
+                    }
+
+                    // More keywords
+                    def timestamp = timestamp()
+                    def unix = isUnix()
+
+                    if (unix) {
+                        sh 'docker build -t myapp .'
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline finished'
+        }
+        success {
+            echo 'Pipeline succeeded'
+        }
+        failure {
+            echo 'Pipeline failed'
+        }
+    }
+}

@@ -1,0 +1,81 @@
+<!-- Plugin Configuration File: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <!-- Unique identifier of the plugin. It should be FQN, cannot be changed between the plugin versions. -->
+    <id>com.github.bashtovoi.jenkinsfile-syntax-highlighter</id>
+
+    <!-- Public plugin name should be written in Title Case.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-name -->
+    <name>Jenkinsfile Syntax Highlighter</name>
+
+    <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
+    <vendor email="valerii@motivateclock.org" url="https://github.com/bashtovoi/jenkinsfile-syntax-highlighter">Valerii Bashtovoi</vendor>
+
+    <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-description -->
+    <description><![CDATA[
+        <p>Comprehensive syntax highlighting and language support for Jenkinsfile (<a href="https://www.jenkins.io/doc/book/pipeline/syntax/">Jenkins Pipeline</a>) files in IntelliJ-based IDEs.</p>
+
+        <p><b>Key Features:</b></p>
+        <ul>
+            <li><b>Syntax Highlighting</b> - Color-coded highlighting for Jenkins Pipeline DSL keywords, strings, comments, and more</li>
+            <li><b>Code Folding</b> - Collapse and expand pipeline blocks, stages, and steps for better code navigation</li>
+            <li><b>Brace Matching</b> - Automatic matching of braces, brackets, and parentheses</li>
+            <li><b>Code Completion</b> - Basic auto-completion for Jenkins Pipeline keywords</li>
+        </ul>
+
+        <p><b>Perfect for:</b> DevOps engineers, CI/CD developers, and anyone working with Jenkins Pipeline as Code.</p>
+    ]]></description>
+
+    <!-- Product and plugin compatibility requirements.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
+
+    <depends>com.intellij.modules.platform</depends>
+    <resource-bundle>messages.MyMessageBundle</resource-bundle>
+    <!-- Extensions defined by the plugin.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="MyToolWindow" factoryClass="com.example.jenkinsplugin.MyToolWindowFactory"
+                    icon="AllIcons.Toolwindows.ToolWindowPalette"/>
+
+        <!-- Jenkins language parser -->
+        <lang.parserDefinition
+            language="Jenkins"
+            implementationClass="com.example.jenkinsplugin.JenkinsParserDefinition"/>
+
+        <!-- Jenkins file type and language support -->
+        <fileType name="Jenkins"
+                  implementationClass="com.example.jenkinsplugin.JenkinsFileType"
+                  fieldName="INSTANCE"
+                  language="Jenkins"
+                  extensions="jenkinsfile"
+                  fileNames="Jenkinsfile"
+                  patterns="*jenkinsfile*;*Jenkinsfile*"/>
+
+        <!-- File type detector with high priority -->
+        <fileTypeDetector implementation="com.example.jenkinsplugin.JenkinsFileTypeDetector"/>
+
+        <lang.syntaxHighlighterFactory
+            language="Jenkins"
+            implementationClass="com.example.jenkinsplugin.JenkinsSyntaxHighlighterFactory"/>
+
+        <!-- Code folding for blocks -->
+        <lang.foldingBuilder
+            language="Jenkins"
+            implementationClass="com.example.jenkinsplugin.JenkinsFoldingBuilder"/>
+
+        <!-- Brace matching -->
+        <lang.braceMatcher
+            language="Jenkins"
+            implementationClass="com.example.jenkinsplugin.JenkinsBraceMatcher"/>
+
+        <!-- Code completion -->
+        <completion.contributor
+            language="Jenkins"
+            implementationClass="com.example.jenkinsplugin.JenkinsCompletionContributor"/>
+
+        <!-- Comment/uncomment support (Cmd+/) -->
+        <lang.commenter
+            language="Jenkins"
+            implementationClass="com.example.jenkinsplugin.JenkinsCommenter"/>
+    </extensions>
+</idea-plugin>

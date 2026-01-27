@@ -1,0 +1,26 @@
+#!groovy
+
+pipeline {
+  agent none
+
+  stages {
+
+    // --- RELEASE ---
+    stage('Release') {
+      agent {
+        label "node"
+      }
+      when {
+        expression {
+          GIT_TAG = sh(returnStdout: true, script: 'git describe --exact-match --tags HEAD || true')
+          return GIT_TAG
+          // return GIT_TAG ==~ /^(\d+\.)?(\d+\.)?(\*|\d+)$/
+        }
+      }
+      steps {
+        addShortText text: GIT_TAG, borderColor: 'transparent'
+        addBadge icon: 'completed.gif', text: GIT_TAG
+      }
+    }
+  }
+}

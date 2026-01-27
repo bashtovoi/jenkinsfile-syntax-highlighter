@@ -1,0 +1,185 @@
+name: Release Plugin
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    name: Create Release with Auto-Generated Notes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Extract version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Release version: $VERSION"
+
+      - name: Update version in build.gradle.kts
+        run: |
+          sed -i "s/version = \".*\"/version = \"${{ steps.get_version.outputs.VERSION }}\"/" build.gradle.kts
+          cat build.gradle.kts | grep "version = "
+
+      - name: Build plugin
+        run: ./gradlew buildPlugin
+
+      - name: Run tests
+        run: ./gradlew test
+
+      - name: Verify plugin
+        run: ./gradlew verifyPlugin
+
+      - name: Generate categorized release notes
+        id: release_notes
+        run: |
+          # Get the previous tag
+          PREVIOUS_TAG=$(git tag --sort=-creatordate | grep -v "^${{ github.ref_name }}$" | head -n 1)
+
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "No previous tag found, using initial commit"
+            PREVIOUS_TAG=$(git rev-list --max-parents=0 HEAD)
+          fi
+
+          echo "Generating release notes from $PREVIOUS_TAG to ${{ github.ref_name }}"
+
+          # Initialize release notes file
+          cat > release_notes.md << 'EOF'
+          ## What's Changed
+
+          EOF
+
+          # Categorize commits
+          declare -A categories
+          categories[feat]="### ✨ New Features"
+          categories[fix]="### 🐛 Bug Fixes"
+          categories[docs]="### 📝 Documentation"
+          categories[style]="### 💄 Style Changes"
+          categories[refactor]="### ♻️ Code Refactoring"
+          categories[perf]="### ⚡ Performance Improvements"
+          categories[test]="### ✅ Tests"
+          categories[build]="### 🔧 Build System"
+          categories[ci]="### 👷 CI/CD"
+          categories[chore]="### 🔨 Chores"
+          categories[other]="### 📦 Other Changes"
+
+          # Temporary files for each category
+          for key in "${!categories[@]}"; do
+            > /tmp/commits_$key.txt
+          done
+
+          # Parse commits and categorize them
+          git log $PREVIOUS_TAG..${{ github.ref_name }} --pretty=format:"%s|||%h|||%an" | while IFS='|||' read -r message hash author; do
+            # Extract conventional commit type
+            if [[ $message =~ ^([a-z]+)(\(.+\))?:\ (.+)$ ]]; then
+              type="${BASH_REMATCH[1]}"
+              scope="${BASH_REMATCH[2]}"
+              description="${BASH_REMATCH[3]}"
+
+              # Capitalize first letter of description
+              description="$(tr '[:lower:]' '[:upper:]' <<< ${description:0:1})${description:1}"
+
+              if [[ -n "${categories[$type]}" ]]; then
+                echo "- $description ($hash)" >> /tmp/commits_$type.txt
+              else
+                echo "- $message ($hash)" >> /tmp/commits_other.txt
+              fi
+            else
+              # Not a conventional commit, put in other
+              echo "- $message ($hash)" >> /tmp/commits_other.txt
+            fi
+          done
+
+          # Append categorized commits to release notes
+          for key in feat fix docs style refactor perf test build ci chore other; do
+            if [ -s /tmp/commits_$key.txt ]; then
+              echo "" >> release_notes.md
+              echo "${categories[$key]}" >> release_notes.md
+              echo "" >> release_notes.md
+              cat /tmp/commits_$key.txt >> release_notes.md
+            fi
+          done
+
+          # Add contributors
+          echo "" >> release_notes.md
+          echo "### 👥 Contributors" >> release_notes.md
+          echo "" >> release_notes.md
+          git log $PREVIOUS_TAG..${{ github.ref_name }} --pretty=format:"%an" | sort -u | while read author; do
+            echo "- $author" >> release_notes.md
+          done
+
+          # Add installation instructions
+          cat >> release_notes.md << 'EOF'
+
+          ## 📥 Installation
+
+          ### From JetBrains Marketplace (Recommended)
+          1. Open your JetBrains IDE (IntelliJ IDEA, WebStorm, PyCharm, etc.)
+          2. Go to **Settings/Preferences** > **Plugins**
+          3. Search for "Jenkinsfile"
+          4. Click **Install** and restart your IDE
+
+          ### Manual Installation
+          1. Download the plugin ZIP file from the assets below
+          2. Go to **Settings/Preferences** > **Plugins**
+          3. Click the gear icon ⚙️ and select **Install Plugin from Disk...**
+          4. Select the downloaded `.zip` file
+          5. Restart your IDE
+
+          ## 🔗 Links
+
+          EOF
+
+          echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREVIOUS_TAG...${{ github.ref_name }}" >> release_notes.md
+
+          echo "" >> release_notes.md
+          echo "---" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "If you find this plugin useful, please ⭐ star the repository and share it with others!" >> release_notes.md
+
+          cat release_notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ steps.get_version.outputs.VERSION }}
+          body_path: release_notes.md
+          files: |
+            build/distributions/*.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to JetBrains Marketplace
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          PUBLISH_TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
+        run: |
+          if [ -n "$PUBLISH_TOKEN" ]; then
+            echo "Publishing to JetBrains Marketplace..."
+            ./gradlew publishPlugin
+          else
+            echo "⚠️  JETBRAINS_MARKETPLACE_TOKEN not set, skipping marketplace publish"
+            echo "To publish to JetBrains Marketplace, add JETBRAINS_MARKETPLACE_TOKEN to repository secrets"
+          fi

@@ -1,0 +1,41 @@
+// Jenkinsfile with regex examples
+pipeline {
+    agent any
+
+    stages {
+        stage('Regex Examples') {
+            steps {
+                script {
+                    // Groovy regex pattern with ~/
+                    def pattern1 = ~/[0-9]+/
+                    def pattern2 = ~/^[a-zA-Z]+$/
+                    def emailPattern = ~/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+
+                    // Slashy string regex
+                    def pattern3 = /.*\.txt$/
+                    def pattern4 = /build-\d+/
+
+                    // Using regex in conditionals
+                    if (env.BRANCH_NAME =~ /^feature\/.*/) {
+                        echo "This is a feature branch"
+                    }
+
+                    // Using regex matching
+                    def matcher = "test123" =~ /test(\d+)/
+
+                    // Complex regex patterns
+                    def urlPattern = ~/https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/
+                }
+            }
+        }
+
+        stage('When with Regex') {
+            when {
+                expression { env.BRANCH_NAME =~ /^release\/.*/ }
+            }
+            steps {
+                echo "Release branch detected"
+            }
+        }
+    }
+}

@@ -1,0 +1,191 @@
+// Test file for function call syntax highlighting
+pipeline {
+    agent any
+
+    stages {
+        stage('Test Shell Commands') {
+            steps {
+                // Function call syntax - sh(), bat(), etc.
+                sh('echo "Hello from sh()"')
+                sh 'echo "Hello from sh with space"'
+
+                bat('dir')
+                bat 'dir'
+
+                powershell('Get-Date')
+                powershell 'Get-Date'
+
+                // Multi-line shell
+                sh('''
+                    echo "Multi-line"
+                    ls -la
+                    pwd
+                ''')
+            }
+        }
+
+        stage('Test Output Commands') {
+            steps {
+                // Output functions
+                echo('This is echo()')
+                echo 'This is echo with space'
+
+                println('This is println()')
+                println 'This is println with space'
+
+                print('This is print()')
+                print 'This is print with space'
+            }
+        }
+
+        stage('Test File Operations') {
+            steps {
+                script {
+                    // File operation functions
+                    def exists = fileExists('README.md')
+                    def content = readFile('file.txt')
+                    writeFile(file: 'output.txt', text: 'content')
+
+                    dir('subdir') {
+                        pwd()
+                        deleteDir()
+                    }
+                }
+            }
+        }
+
+        stage('Test Build Steps') {
+            steps {
+                script {
+                    // Build step functions
+                    checkout(scm)
+
+                    sleep(5)
+                    sleep 5
+
+                    waitUntil {
+                        return true
+                    }
+
+                    build(job: 'other-job')
+                    build job: 'other-job'
+                }
+            }
+        }
+
+        stage('Test Error Handling') {
+            steps {
+                script {
+                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                        error('Test error')
+                    }
+
+                    warnError('Warning message')
+                }
+            }
+        }
+
+        stage('Test Artifacts') {
+            steps {
+                // Artifact functions
+                stash(name: 'my-stash', includes: '**/*')
+                unstash('my-stash')
+
+                archiveArtifacts(artifacts: '**/*.jar', fingerprint: true)
+                archiveArtifacts artifacts: '**/*.jar'
+
+                junit('**/target/test-*.xml')
+                junit '**/target/test-*.xml'
+
+                publishHTML(target: [reportName: 'Report'])
+            }
+        }
+
+        stage('Test Notifications') {
+            steps {
+                // Notification functions
+                mail(to: 'team@example.com', subject: 'Build', body: 'Success')
+
+                emailext(to: 'team@example.com', subject: 'Build')
+
+                slackSend(channel: '#builds', message: 'Build complete')
+            }
+        }
+
+        stage('Test Wrappers') {
+            steps {
+                // Wrapper functions
+                withEnv(['KEY=value']) {
+                    echo("${env.KEY}")
+                }
+
+                withCredentials([usernamePassword(credentialsId: 'id', usernameVariable: 'U', passwordVariable: 'P')]) {
+                    sh('echo "Using credentials"')
+                }
+
+                withAWS(region: 'us-east-1') {
+                    sh('aws s3 ls')
+                }
+
+                withKubeConfig(credentialsId: 'kube-config') {
+                    sh('kubectl get pods')
+                }
+            }
+        }
+
+        stage('Test Docker') {
+            steps {
+                script {
+                    // Docker functions
+                    docker.build('myapp:latest')
+                    docker.image('myapp:latest').push()
+
+                    dockerNode('docker-agent') {
+                        sh('docker ps')
+                    }
+                }
+            }
+        }
+
+        stage('Test Utility Functions') {
+            steps {
+                script {
+                    // Utility functions
+                    def ts = timestamp()
+                    def unix = isUnix()
+
+                    node('agent-label') {
+                        ws('workspace') {
+                            sh('pwd')
+                        }
+                    }
+
+                    load('script.groovy')
+                    library('shared-lib')
+                }
+            }
+        }
+
+        stage('Test Input') {
+            steps {
+                script {
+                    // Input function
+                    def userInput = input(message: 'Proceed?', ok: 'Yes')
+                    input message: 'Continue?'
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo('Pipeline complete')
+        }
+        success {
+            echo('Success!')
+        }
+        failure {
+            echo('Failed!')
+        }
+    }
+}
