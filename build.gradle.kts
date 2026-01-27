@@ -75,7 +75,9 @@ intellijPlatform {
 
     pluginVerification {
         ides {
-            recommended()
+            // Only verify against min and current versions to save disk space in CI
+            create(org.jetbrains.intellij.platform.gradle.IntelliJPlatformType.IntellijIdeaCommunity, "2024.1.7")
+            create(org.jetbrains.intellij.platform.gradle.IntelliJPlatformType.IntellijIdeaCommunity, "2025.2.4")
         }
     }
 }
