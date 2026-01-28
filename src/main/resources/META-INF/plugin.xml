@@ -14,7 +14,6 @@
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-description -->
     <description><![CDATA[
         <p>Comprehensive syntax highlighting and language support for Jenkinsfile (<a href="https://www.jenkins.io/doc/book/pipeline/syntax/">Jenkins Pipeline</a>) files in IntelliJ-based IDEs.</p>
-
         <p><b>Key Features:</b></p>
         <ul>
             <li><b>Syntax Highlighting</b> - Color-coded highlighting for Jenkins Pipeline DSL keywords, strings, comments, and more</li>
@@ -22,8 +21,6 @@
             <li><b>Brace Matching</b> - Automatic matching of braces, brackets, and parentheses</li>
             <li><b>Code Completion</b> - Basic auto-completion for Jenkins Pipeline keywords</li>
         </ul>
-
-        <p><b>Perfect for:</b> DevOps engineers, CI/CD developers, and anyone working with Jenkins Pipeline as Code.</p>
     ]]></description>
 
     <!-- Product and plugin compatibility requirements.
