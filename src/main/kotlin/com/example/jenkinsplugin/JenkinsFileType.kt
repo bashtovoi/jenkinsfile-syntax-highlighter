@@ -15,5 +15,5 @@ class JenkinsFileType : LanguageFileType(JenkinsLanguage.INSTANCE) {
 
     override fun getDefaultExtension(): String = "jenkinsfile"
 
-    override fun getIcon(): Icon? = null
+    override fun getIcon(): Icon = JenkinsIcons.FILE
 }
