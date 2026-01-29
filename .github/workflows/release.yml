@@ -109,13 +109,13 @@ jobs:
               description="$(tr '[:lower:]' '[:upper:]' <<< ${description:0:1})${description:1}"
 
               if [[ -n "${html_categories[$type]}" ]]; then
-                # Store both HTML and MD format in same file
-                echo "$type|||$description|||$hash" >> /tmp/commits_$type.txt
+                # Store description and hash with a unique delimiter
+                echo "$description###$hash" >> /tmp/commits_$type.txt
               else
-                echo "other|||$message|||$hash" >> /tmp/commits_other.txt
+                echo "$message###$hash" >> /tmp/commits_other.txt
               fi
             else
-              echo "other|||$message|||$hash" >> /tmp/commits_other.txt
+              echo "$message###$hash" >> /tmp/commits_other.txt
             fi
           done < <(git log $PREVIOUS_TAG..${{ github.ref_name }} --pretty=format:"%s|||%h|||%an")
 
@@ -131,7 +131,7 @@ jobs:
               HAS_HTML_COMMITS=true
               echo "                <li><b>${html_categories[$key]}</b>" >> /tmp/new_changelog.html
               echo "                    <ul>" >> /tmp/new_changelog.html
-              while IFS='|||' read -r type description hash; do
+              while IFS='###' read -r description hash; do
                 echo "                        <li>$description</li>" >> /tmp/new_changelog.html
               done < /tmp/commits_$key.txt
               echo "                    </ul>" >> /tmp/new_changelog.html
@@ -141,7 +141,7 @@ jobs:
 
           # Add other commits to HTML
           if [ -s /tmp/commits_other.txt ]; then
-            while IFS='|||' read -r type description hash; do
+            while IFS='###' read -r description hash; do
               echo "                <li>$description</li>" >> /tmp/new_changelog.html
             done < /tmp/commits_other.txt
           fi
@@ -165,7 +165,7 @@ jobs:
               echo "" >> release_notes.md
               echo "${md_categories[$key]}" >> release_notes.md
               echo "" >> release_notes.md
-              while IFS='|||' read -r type description hash; do
+              while IFS='###' read -r description hash; do
                 echo "- $description ($hash)" >> release_notes.md
               done < /tmp/commits_$key.txt
             fi
@@ -177,7 +177,7 @@ jobs:
             echo "" >> release_notes.md
             echo "### 📦 Other Changes" >> release_notes.md
             echo "" >> release_notes.md
-            while IFS='|||' read -r type description hash; do
+            while IFS='###' read -r description hash; do
               echo "- $description ($hash)" >> release_notes.md
             done < /tmp/commits_other.txt
           fi
@@ -240,16 +240,27 @@ jobs:
           with open('/tmp/new_changelog.html', 'r') as f:
               new_changelog = f.read()
 
-          # Find and replace the changeNotes section
-          pattern = r'(changeNotes = """)\s*(.*?)(\s*""".trimIndent\(\))'
+          # Try to find existing changeNotes with triple quotes
+          pattern_triple = r'(changeNotes = """)\s*(.*?)(\s*""".trimIndent\(\))'
+          match = re.search(pattern_triple, content, flags=re.DOTALL)
 
-          def replace_changelog(match):
+          if match:
+              # Has triple-quoted format
               existing = match.group(2).strip()
-              # Prepend new changelog to existing
-              updated = new_changelog + existing
-              return match.group(1) + '\n' + updated + match.group(3)
-
-          content = re.sub(pattern, replace_changelog, content, flags=re.DOTALL)
+              if existing:
+                  updated = new_changelog + existing
+              else:
+                  updated = new_changelog
+              content = re.sub(pattern_triple, match.group(1) + '\n' + updated + match.group(3), content, flags=re.DOTALL)
+          else:
+              # Try single/double quotes format (empty or simple string)
+              pattern_simple = r'changeNotes = ""'
+              if re.search(pattern_simple, content):
+                  # Replace empty string with triple-quoted format
+                  replacement = 'changeNotes = """\n' + new_changelog + '        """.trimIndent()'
+                  content = re.sub(pattern_simple, replacement, content)
+              else:
+                  print("Warning: Could not find changeNotes field")
 
           with open('build.gradle.kts', 'w') as f:
               f.write(content)

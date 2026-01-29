@@ -37,7 +37,75 @@ intellijPlatform {
             untilBuild = provider { null }  // Support all future versions
         }
 
-        changeNotes = ""
+        changeNotes = """
+            <h3>1.0.6</h3>
+            <ul>
+                <li><b>New Features</b>
+                    <ul>
+                        <li>Generate change notes via Workflows</li>
+                        <li>Improve Jenkinsfile icon</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h3>1.0.5</h3>
+            <ul>
+                <li><b>New Features</b>
+                    <ul>
+                        <li>Add icon for Jenkinsfiles</li>
+                    </ul>
+                </li>
+                <li><b>Documentation</b>
+                    <ul>
+                        <li>Simplify plugin description</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h3>1.0.4</h3>
+            <ul>
+                <li><b>Documentation</b>
+                    <ul>
+                        <li>Add plugin screenshots</li>
+                    </ul>
+                </li>
+                <li><b>CI/CD</b>
+                    <ul>
+                        <li>Fix generate categorized release notes step</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h3>1.0.3</h3>
+            <ul>
+                <li><b>CI/CD</b>
+                    <ul>
+                        <li>Remove Verify plugin step from Workflows</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h3>1.0.2</h3>
+            <ul>
+                <li><b>CI/CD</b>
+                    <ul>
+                        <li>Remove JetBrains Marketplace publish step from Release workflows</li>
+                        <li>Fix GitHub Actions runner disk space issue</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h3>1.0.1</h3>
+            <ul>
+                <li><b>New Features</b>
+                    <ul>
+                        <li>Add comprehensive syntax highlighting for Jenkins Pipeline DSL</li>
+                        <li>Support for code folding, brace matching, and code completion</li>
+                        <li>Automatic Jenkinsfile detection</li>
+                    </ul>
+                </li>
+            </ul>
+        """.trimIndent()
     }
 
     pluginVerification {
