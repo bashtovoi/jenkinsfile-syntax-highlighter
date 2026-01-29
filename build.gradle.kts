@@ -37,40 +37,7 @@ intellijPlatform {
             untilBuild = provider { null }  // Support all future versions
         }
 
-        changeNotes = """
-            <h3>1.0.0 - Initial Release</h3>
-            <ul>
-                <li><b>Syntax Highlighting</b>
-                    <ul>
-                        <li>Full Jenkins Pipeline DSL keyword highlighting</li>
-                        <li>Groovy language syntax support</li>
-                        <li>String, comment, number highlighting</li>
-                        <li>Regex pattern highlighting</li>
-                    </ul>
-                </li>
-                <li><b>Code Structure</b>
-                    <ul>
-                        <li>Code folding for pipeline blocks</li>
-                        <li>Brace, bracket, and parenthesis matching</li>
-                        <li>Automatic Jenkinsfile detection</li>
-                    </ul>
-                </li>
-                <li><b>Editing Features</b>
-                    <ul>
-                        <li>Comment/uncomment support (Cmd+/ or Ctrl+/)</li>
-                        <li>Basic code completion for keywords</li>
-                    </ul>
-                </li>
-                <li><b>Supported Keywords</b>
-                    <ul>
-                        <li>Pipeline structure: pipeline, stages, stage, steps, parallel, matrix</li>
-                        <li>Sections: agent, environment, options, parameters, triggers, post, tools</li>
-                        <li>Build steps: sh, bat, echo, checkout, build, and 30+ more</li>
-                        <li>Conditions: when, post conditions (success, failure, always, etc.)</li>
-                    </ul>
-                </li>
-            </ul>
-        """.trimIndent()
+        changeNotes = ""
     }
 
     pluginVerification {

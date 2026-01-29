@@ -51,14 +51,8 @@ jobs:
           sed -i "s/version = \".*\"/version = \"${{ steps.get_version.outputs.VERSION }}\"/" build.gradle.kts
           cat build.gradle.kts | grep "version = "
 
-      - name: Build plugin
-        run: ./gradlew buildPlugin
-
-      - name: Run tests
-        run: ./gradlew test
-
-      - name: Generate categorized release notes
-        id: release_notes
+      - name: Generate changelogs (HTML + Markdown)
+        id: generate_changelog
         run: |
           # Get the previous tag
           PREVIOUS_TAG=$(git tag --sort=-creatordate | grep -v "^${{ github.ref_name }}$" | head -n 1)
@@ -68,89 +62,138 @@ jobs:
             PREVIOUS_TAG=$(git rev-list --max-parents=0 HEAD)
           fi
 
-          echo "Generating release notes from $PREVIOUS_TAG to ${{ github.ref_name }}"
+          echo "Generating changelogs from $PREVIOUS_TAG to ${{ github.ref_name }}"
 
           # Count commits
           COMMIT_COUNT=$(git log $PREVIOUS_TAG..${{ github.ref_name }} --oneline | wc -l)
           echo "Found $COMMIT_COUNT commits"
 
-          if [ "$COMMIT_COUNT" -eq 0 ]; then
-            echo "Warning: No commits found between $PREVIOUS_TAG and ${{ github.ref_name }}"
+          # Category mappings for both HTML and Markdown
+          declare -A html_categories md_categories
+          html_categories[feat]="New Features"
+          html_categories[fix]="Bug Fixes"
+          html_categories[docs]="Documentation"
+          html_categories[perf]="Performance Improvements"
+          html_categories[style]="Style Changes"
+          html_categories[refactor]="Code Refactoring"
+          html_categories[test]="Tests"
+          html_categories[build]="Build System"
+          html_categories[ci]="CI/CD"
+          html_categories[chore]="Chores"
+
+          md_categories[feat]="### ✨ New Features"
+          md_categories[fix]="### 🐛 Bug Fixes"
+          md_categories[docs]="### 📝 Documentation"
+          md_categories[perf]="### ⚡ Performance Improvements"
+          md_categories[style]="### 💄 Style Changes"
+          md_categories[refactor]="### ♻️ Code Refactoring"
+          md_categories[test]="### ✅ Tests"
+          md_categories[build]="### 🔧 Build System"
+          md_categories[ci]="### 👷 CI/CD"
+          md_categories[chore]="### 🔨 Chores"
+
+          # Create temp files for each category
+          for key in feat fix docs perf style refactor test build ci chore; do
+            > /tmp/commits_$key.txt
+          done
+          > /tmp/commits_other.txt
+
+          # Parse and categorize commits (single pass)
+          declare -A authors
+          while IFS='|||' read -r message hash author; do
+            authors["$author"]=1
+
+            if [[ $message =~ ^([a-z]+)(\(.+\))?:\ (.+)$ ]]; then
+              type="${BASH_REMATCH[1]}"
+              description="${BASH_REMATCH[3]}"
+              description="$(tr '[:lower:]' '[:upper:]' <<< ${description:0:1})${description:1}"
+
+              if [[ -n "${html_categories[$type]}" ]]; then
+                # Store both HTML and MD format in same file
+                echo "$type|||$description|||$hash" >> /tmp/commits_$type.txt
+              else
+                echo "other|||$message|||$hash" >> /tmp/commits_other.txt
+              fi
+            else
+              echo "other|||$message|||$hash" >> /tmp/commits_other.txt
+            fi
+          done < <(git log $PREVIOUS_TAG..${{ github.ref_name }} --pretty=format:"%s|||%h|||%an")
+
+          # ========== Generate HTML Changelog ==========
+          cat > /tmp/new_changelog.html << 'CHANGELOG_START'
+            <h3>${{ steps.get_version.outputs.VERSION }}</h3>
+            <ul>
+          CHANGELOG_START
+
+          HAS_HTML_COMMITS=false
+          for key in feat fix perf docs style refactor test build ci chore; do
+            if [ -s /tmp/commits_$key.txt ]; then
+              HAS_HTML_COMMITS=true
+              echo "                <li><b>${html_categories[$key]}</b>" >> /tmp/new_changelog.html
+              echo "                    <ul>" >> /tmp/new_changelog.html
+              while IFS='|||' read -r type description hash; do
+                echo "                        <li>$description</li>" >> /tmp/new_changelog.html
+              done < /tmp/commits_$key.txt
+              echo "                    </ul>" >> /tmp/new_changelog.html
+              echo "                </li>" >> /tmp/new_changelog.html
+            fi
+          done
+
+          # Add other commits to HTML
+          if [ -s /tmp/commits_other.txt ]; then
+            while IFS='|||' read -r type description hash; do
+              echo "                <li>$description</li>" >> /tmp/new_changelog.html
+            done < /tmp/commits_other.txt
           fi
 
-          # Initialize release notes file
+          echo "            </ul>" >> /tmp/new_changelog.html
+          echo "" >> /tmp/new_changelog.html
+
+          echo "Generated HTML changelog:"
+          cat /tmp/new_changelog.html
+
+          # ========== Generate Markdown Release Notes ==========
           cat > release_notes.md << 'EOF'
           ## What's Changed
 
           EOF
 
-          # Categorize commits
-          declare -A categories
-          categories[feat]="### ✨ New Features"
-          categories[fix]="### 🐛 Bug Fixes"
-          categories[docs]="### 📝 Documentation"
-          categories[style]="### 💄 Style Changes"
-          categories[refactor]="### ♻️ Code Refactoring"
-          categories[perf]="### ⚡ Performance Improvements"
-          categories[test]="### ✅ Tests"
-          categories[build]="### 🔧 Build System"
-          categories[ci]="### 👷 CI/CD"
-          categories[chore]="### 🔨 Chores"
-          categories[other]="### 📦 Other Changes"
-
-          # Temporary files for each category
-          for key in "${!categories[@]}"; do
-            > /tmp/commits_$key.txt
-          done
-
-          # Parse commits and categorize them
-          while IFS='|||' read -r message hash author; do
-            # Extract conventional commit type
-            if [[ $message =~ ^([a-z]+)(\(.+\))?:\ (.+)$ ]]; then
-              type="${BASH_REMATCH[1]}"
-              scope="${BASH_REMATCH[2]}"
-              description="${BASH_REMATCH[3]}"
-
-              # Capitalize first letter of description
-              description="$(tr '[:lower:]' '[:upper:]' <<< ${description:0:1})${description:1}"
-
-              if [[ -n "${categories[$type]}" ]]; then
-                echo "- $description ($hash)" >> /tmp/commits_$type.txt
-              else
-                echo "- $message ($hash)" >> /tmp/commits_other.txt
-              fi
-            else
-              # Not a conventional commit, put in other
-              echo "- $message ($hash)" >> /tmp/commits_other.txt
-            fi
-          done < <(git log $PREVIOUS_TAG..${{ github.ref_name }} --pretty=format:"%s|||%h|||%an")
-
-          # Append categorized commits to release notes
-          HAS_COMMITS=false
-          for key in feat fix docs style refactor perf test build ci chore other; do
+          HAS_MD_COMMITS=false
+          for key in feat fix docs style refactor perf test build ci chore; do
             if [ -s /tmp/commits_$key.txt ]; then
-              HAS_COMMITS=true
+              HAS_MD_COMMITS=true
               echo "" >> release_notes.md
-              echo "${categories[$key]}" >> release_notes.md
+              echo "${md_categories[$key]}" >> release_notes.md
               echo "" >> release_notes.md
-              cat /tmp/commits_$key.txt >> release_notes.md
+              while IFS='|||' read -r type description hash; do
+                echo "- $description ($hash)" >> release_notes.md
+              done < /tmp/commits_$key.txt
             fi
           done
 
-          # Add message if no commits found
-          if [ "$HAS_COMMITS" = false ]; then
+          # Add other commits to Markdown
+          if [ -s /tmp/commits_other.txt ]; then
+            HAS_MD_COMMITS=true
+            echo "" >> release_notes.md
+            echo "### 📦 Other Changes" >> release_notes.md
+            echo "" >> release_notes.md
+            while IFS='|||' read -r type description hash; do
+              echo "- $description ($hash)" >> release_notes.md
+            done < /tmp/commits_other.txt
+          fi
+
+          if [ "$HAS_MD_COMMITS" = false ]; then
             echo "" >> release_notes.md
             echo "No categorized changes in this release." >> release_notes.md
-            echo "" >> release_notes.md
           fi
 
           # Add contributors
           echo "" >> release_notes.md
           echo "### 👥 Contributors" >> release_notes.md
           echo "" >> release_notes.md
-          while read author; do
+          for author in "${!authors[@]}"; do
             echo "- $author" >> release_notes.md
-          done < <(git log $PREVIOUS_TAG..${{ github.ref_name }} --pretty=format:"%an" | sort -u)
+          done
 
           # Add installation instructions
           cat >> release_notes.md << 'EOF'
@@ -175,13 +218,53 @@ jobs:
           EOF
 
           echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREVIOUS_TAG...${{ github.ref_name }}" >> release_notes.md
-
           echo "" >> release_notes.md
           echo "---" >> release_notes.md
           echo "" >> release_notes.md
           echo "If you find this plugin useful, please ⭐ star the repository and share it with others!" >> release_notes.md
 
+          echo ""
+          echo "Generated Markdown release notes:"
           cat release_notes.md
+
+      - name: Update changeNotes in build.gradle.kts
+        run: |
+          # Create a Python script to update the changeNotes
+          cat > /tmp/update_changelog.py << 'PYTHON_SCRIPT'
+          import re
+
+          with open('build.gradle.kts', 'r') as f:
+              content = f.read()
+
+          # Read the new changelog
+          with open('/tmp/new_changelog.html', 'r') as f:
+              new_changelog = f.read()
+
+          # Find and replace the changeNotes section
+          pattern = r'(changeNotes = """)\s*(.*?)(\s*""".trimIndent\(\))'
+
+          def replace_changelog(match):
+              existing = match.group(2).strip()
+              # Prepend new changelog to existing
+              updated = new_changelog + existing
+              return match.group(1) + '\n' + updated + match.group(3)
+
+          content = re.sub(pattern, replace_changelog, content, flags=re.DOTALL)
+
+          with open('build.gradle.kts', 'w') as f:
+              f.write(content)
+          PYTHON_SCRIPT
+
+          python3 /tmp/update_changelog.py
+
+          echo "Updated build.gradle.kts changeNotes:"
+          grep -A 20 "changeNotes = " build.gradle.kts | head -25
+
+      - name: Build plugin
+        run: ./gradlew buildPlugin
+
+      - name: Run tests
+        run: ./gradlew test
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
