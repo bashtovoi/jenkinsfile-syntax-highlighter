@@ -300,9 +300,11 @@ class JenkinsLexerTest {
         assertEquals(1, endTokens.size)
         assertEquals("}", endTokens[0].first)
 
-        // Content inside interpolation should not be STRING type
+        // 'env' is a plain identifier; the variable name after env. is ENV_VAR
         val envToken = tokens.find { it.first == "env" }
         assertEquals(JenkinsTokenTypes.IDENTIFIER, envToken?.second)
+        val verToken = tokens.find { it.first == "VER" }
+        assertEquals(JenkinsTokenTypes.ENV_VAR, verToken?.second)
     }
 
     @Test

@@ -6,6 +6,8 @@ import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.openapi.fileTypes.SyntaxHighlighterBase
 import com.intellij.psi.tree.IElementType
 import com.intellij.openapi.editor.HighlighterColors
+import com.intellij.openapi.editor.markup.TextAttributes
+import java.awt.Color
 
 class JenkinsSyntaxHighlighter : SyntaxHighlighterBase() {
 
@@ -75,6 +77,11 @@ class JenkinsSyntaxHighlighter : SyntaxHighlighterBase() {
             "JENKINS_BOOLEAN",
             DefaultLanguageHighlighterColors.CONSTANT
         )
+
+        // env keyword and env.VARNAME — teal (#4EC9B0), readable in dark and light themes
+        private val ENV_COLOR = TextAttributes(Color(0x4E, 0xC9, 0xB0), null, null, null, 0)
+
+        val ENV_VAR: TextAttributesKey = TextAttributesKey.createTextAttributesKey("JENKINS_ENV_VAR", ENV_COLOR)
 
         val STRING = TextAttributesKey.createTextAttributesKey(
             "JENKINS_STRING",
@@ -157,6 +164,7 @@ class JenkinsSyntaxHighlighter : SyntaxHighlighterBase() {
         private val AGENT_TYPE_KEYS = arrayOf(AGENT_TYPE)
         private val OPTION_KEYWORD_KEYS = arrayOf(OPTION_KEYWORD)
         private val BOOLEAN_LITERAL_KEYS = arrayOf(BOOLEAN_LITERAL)
+        private val ENV_VAR_KEYS = arrayOf(ENV_VAR)
         private val STRING_KEYS = arrayOf(STRING)
         private val GSTRING_CONTENT_KEYS = arrayOf(GSTRING_CONTENT)
         private val STRING_INTERPOLATION_KEYS = arrayOf(STRING_INTERPOLATION)
@@ -191,6 +199,7 @@ class JenkinsSyntaxHighlighter : SyntaxHighlighterBase() {
             JenkinsTokenTypes.AGENT_TYPE -> AGENT_TYPE_KEYS
             JenkinsTokenTypes.OPTION_KEYWORD -> OPTION_KEYWORD_KEYS
             JenkinsTokenTypes.BOOLEAN_LITERAL -> BOOLEAN_LITERAL_KEYS
+            JenkinsTokenTypes.ENV_VAR -> ENV_VAR_KEYS
             JenkinsTokenTypes.STRING -> STRING_KEYS
             JenkinsTokenTypes.GSTRING_CONTENT -> GSTRING_CONTENT_KEYS
             JenkinsTokenTypes.STRING_INTERPOLATION_START,

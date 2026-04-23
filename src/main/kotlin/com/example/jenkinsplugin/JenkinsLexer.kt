@@ -18,6 +18,7 @@ class JenkinsLexer : LexerBase() {
     private var interpolationDepth: Int = 0  // brace nesting inside ${}
     private var stringCloseQuote: String = ""  // " or """
 
+
     companion object {
         // Category 0: Groovy Language Keywords
         private val GROOVY_KEYWORDS = setOf(
@@ -153,12 +154,18 @@ class JenkinsLexer : LexerBase() {
         this.currentOffset = startOffset
         this.tokenStart = startOffset
         this.tokenEnd = startOffset
-        this.state = State.NORMAL
-        this.interpolationDepth = 0
+        this.state = State.entries[initialState and 0x0F]
+        this.interpolationDepth = (initialState shr 4) and 0xFF
+        this.returnStringState = State.entries[(initialState shr 8) and 0x0F]
         advance()
     }
 
-    override fun getState(): Int = 0
+    override fun getState(): Int {
+        var s = state.ordinal and 0x0F
+        s = s or ((interpolationDepth and 0xFF) shl 4)
+        s = s or ((returnStringState.ordinal and 0x0F) shl 8)
+        return s
+    }
 
     override fun getTokenType(): IElementType? = tokenType
 
@@ -318,6 +325,7 @@ class JenkinsLexer : LexerBase() {
                 val text = buffer.substring(tokenStart, tokenEnd)
 
                 tokenType = when {
+                    isPrecededByEnvDot(tokenStart) -> JenkinsTokenTypes.ENV_VAR
                     text in GROOVY_KEYWORDS -> JenkinsTokenTypes.GROOVY_KEYWORD
                     text in PIPELINE_STRUCTURE_KEYWORDS -> JenkinsTokenTypes.PIPELINE_STRUCTURE
                     text in STAGE_KEYWORDS -> JenkinsTokenTypes.STAGE_KEYWORD
@@ -405,6 +413,20 @@ class JenkinsLexer : LexerBase() {
                 tokenType = JenkinsTokenTypes.IDENTIFIER
             }
         }
+    }
+
+    // Returns true if the character immediately before `pos` is '.' preceded by "env"
+    // (with no other identifier chars between). This lets us detect env.VAR purely
+    // from the buffer without any cross-token state.
+    private fun isPrecededByEnvDot(pos: Int): Boolean {
+        if (pos < 4) return false          // need at least "env."
+        if (buffer[pos - 1] != '.') return false
+        // chars at pos-4, pos-3, pos-2 must be 'e','n','v'
+        if (pos < 4) return false
+        if (buffer[pos - 4] != 'e' || buffer[pos - 3] != 'n' || buffer[pos - 2] != 'v') return false
+        // the char before 'e' must not be an identifier char (so "myenv.X" is excluded)
+        val before = pos - 5
+        return before < 0 || (!buffer[before].isLetterOrDigit() && buffer[before] != '_')
     }
 
     private fun advanceInDoubleQuotedString() {

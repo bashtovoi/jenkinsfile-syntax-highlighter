@@ -18,6 +18,7 @@ object JenkinsTokenTypes {
     val OPTION_KEYWORD = IElementType("JENKINS_OPTION", JenkinsLanguage.INSTANCE)
     val PLUGIN_NAME = IElementType("JENKINS_PLUGIN", JenkinsLanguage.INSTANCE)
     val BOOLEAN_LITERAL = IElementType("JENKINS_BOOLEAN", JenkinsLanguage.INSTANCE)
+    val ENV_VAR = IElementType("JENKINS_ENV_VAR", JenkinsLanguage.INSTANCE)
 
     // General tokens
     val STRING = IElementType("JENKINS_STRING", JenkinsLanguage.INSTANCE)
