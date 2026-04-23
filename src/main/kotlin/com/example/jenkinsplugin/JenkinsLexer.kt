@@ -13,7 +13,7 @@ class JenkinsLexer : LexerBase() {
     private var tokenEnd: Int = 0
 
     // Lexer state for string interpolation
-    private enum class State { NORMAL, IN_DQUOTE_STRING, IN_TRIPLE_DQUOTE_STRING, IN_INTERPOLATION }
+    private enum class State { NORMAL, IN_DQUOTE_STRING, IN_TRIPLE_DQUOTE_STRING, IN_SQUOTE_STRING, IN_TRIPLE_SQUOTE_STRING, IN_INTERPOLATION }
     private var state: State = State.NORMAL
     private var interpolationDepth: Int = 0  // brace nesting inside ${}
     private var stringCloseQuote: String = ""  // " or """
@@ -187,6 +187,10 @@ class JenkinsLexer : LexerBase() {
                 advanceInDoubleQuotedString()
                 return
             }
+            State.IN_SQUOTE_STRING, State.IN_TRIPLE_SQUOTE_STRING -> {
+                advanceInSingleQuotedString()
+                return
+            }
             State.IN_INTERPOLATION -> {
                 advanceInInterpolation()
                 return
@@ -224,35 +228,14 @@ class JenkinsLexer : LexerBase() {
                 tokenType = JenkinsTokenTypes.COMMENT
             }
             char == '\'' -> {
-                // Check for triple-quoted string '''
                 if (currentOffset + 2 < endOffset &&
                     buffer[currentOffset + 1] == '\'' &&
                     buffer[currentOffset + 2] == '\'') {
-                    // Triple-quoted string
                     currentOffset += 3
-                    while (currentOffset + 2 < endOffset) {
-                        if (buffer[currentOffset] == '\'' &&
-                            buffer[currentOffset + 1] == '\'' &&
-                            buffer[currentOffset + 2] == '\'') {
-                            currentOffset += 3
-                            break
-                        }
-                        currentOffset++
-                    }
-                    // If we didn't find closing triple quotes, consume to end
-                    if (currentOffset + 2 >= endOffset) {
-                        currentOffset = endOffset
-                    }
+                    state = State.IN_TRIPLE_SQUOTE_STRING
                 } else {
-                    // Single-quoted string
                     currentOffset++
-                    while (currentOffset < endOffset) {
-                        if (buffer[currentOffset] == '\'' && (currentOffset == 0 || buffer[currentOffset - 1] != '\\')) {
-                            currentOffset++
-                            break
-                        }
-                        currentOffset++
-                    }
+                    state = State.IN_SQUOTE_STRING
                 }
                 tokenEnd = currentOffset
                 tokenType = JenkinsTokenTypes.STRING
@@ -325,7 +308,8 @@ class JenkinsLexer : LexerBase() {
                 val text = buffer.substring(tokenStart, tokenEnd)
 
                 tokenType = when {
-                    isPrecededByEnvDot(tokenStart) || isPrecededByParamsDot(tokenStart) -> JenkinsTokenTypes.ENV_VAR
+                    isPrecededByEnvDot(tokenStart) || isPrecededByParamsDot(tokenStart)
+                        || isPrecededByDollarBrace(tokenStart) -> JenkinsTokenTypes.ENV_VAR
                     text in GROOVY_KEYWORDS -> JenkinsTokenTypes.GROOVY_KEYWORD
                     text in PIPELINE_STRUCTURE_KEYWORDS -> JenkinsTokenTypes.PIPELINE_STRUCTURE
                     text in STAGE_KEYWORDS -> JenkinsTokenTypes.STAGE_KEYWORD
@@ -423,6 +407,12 @@ class JenkinsLexer : LexerBase() {
         return before < 0 || (!buffer[before].isLetterOrDigit() && buffer[before] != '_')
     }
 
+    // Detects ${VARNAME} — identifier immediately after "${" inside a string interpolation
+    private fun isPrecededByDollarBrace(pos: Int): Boolean {
+        if (pos < 2) return false
+        return buffer[pos - 1] == '{' && buffer[pos - 2] == '$'
+    }
+
     private fun isPrecededByParamsDot(pos: Int): Boolean {
         if (pos < 7) return false
         if (buffer[pos - 1] != '.') return false
@@ -491,6 +481,60 @@ class JenkinsLexer : LexerBase() {
         tokenEnd = currentOffset
         // String literal content between interpolations gets its own token type so
         // the highlighter can color it consistently with the surrounding GString.
+        tokenType = JenkinsTokenTypes.GSTRING_CONTENT
+    }
+
+    private fun advanceInSingleQuotedString() {
+        val triple = state == State.IN_TRIPLE_SQUOTE_STRING
+        if (currentOffset >= endOffset) { tokenType = null; return }
+
+        if (currentOffset + 1 < endOffset &&
+            buffer[currentOffset] == '$' && buffer[currentOffset + 1] == '{') {
+            currentOffset += 2
+            tokenEnd = currentOffset
+            tokenType = JenkinsTokenTypes.STRING_INTERPOLATION_START
+            returnStringState = state
+            state = State.IN_INTERPOLATION
+            interpolationDepth = 1
+            return
+        }
+
+        if (triple) {
+            if (currentOffset + 2 < endOffset &&
+                buffer[currentOffset] == '\'' &&
+                buffer[currentOffset + 1] == '\'' &&
+                buffer[currentOffset + 2] == '\'') {
+                currentOffset += 3
+                tokenEnd = currentOffset
+                tokenType = JenkinsTokenTypes.STRING
+                state = State.NORMAL
+                return
+            }
+        } else {
+            if (buffer[currentOffset] == '\'' && (currentOffset == 0 || buffer[currentOffset - 1] != '\\')) {
+                currentOffset++
+                tokenEnd = currentOffset
+                tokenType = JenkinsTokenTypes.STRING
+                state = State.NORMAL
+                return
+            }
+        }
+
+        while (currentOffset < endOffset) {
+            if (currentOffset + 1 < endOffset &&
+                buffer[currentOffset] == '$' && buffer[currentOffset + 1] == '{') break
+            if (triple) {
+                if (currentOffset + 2 < endOffset &&
+                    buffer[currentOffset] == '\'' &&
+                    buffer[currentOffset + 1] == '\'' &&
+                    buffer[currentOffset + 2] == '\'') break
+            } else {
+                if (buffer[currentOffset] == '\'' && (currentOffset == 0 || buffer[currentOffset - 1] != '\\')) break
+            }
+            currentOffset++
+        }
+        if (currentOffset >= endOffset) state = State.NORMAL
+        tokenEnd = currentOffset
         tokenType = JenkinsTokenTypes.GSTRING_CONTENT
     }
 

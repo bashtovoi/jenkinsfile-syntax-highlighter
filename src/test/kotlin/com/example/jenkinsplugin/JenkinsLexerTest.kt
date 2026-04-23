@@ -242,15 +242,17 @@ class JenkinsLexerTest {
         val commentTokens = tokens.filter { it.second == JenkinsTokenTypes.COMMENT }
         assertEquals(2, commentTokens.size)
 
+        // Both single and double quoted strings: open/close quotes are STRING, content is GSTRING_CONTENT
         val stringTokens = tokens.filter { it.second == JenkinsTokenTypes.STRING }
-        val squoteToken = stringTokens.first { it.first == "'build.sh'" }
-        assertEquals("'build.sh'", squoteToken.first)
+        val squoteQuotes = stringTokens.filter { it.first == "'" }
+        assertEquals(2, squoteQuotes.size)
+        val squoteContent = tokens.find { it.second == JenkinsTokenTypes.GSTRING_CONTENT && it.first == "build.sh" }
+        assertEquals("build.sh", squoteContent?.first)
 
-        // Double-quoted strings: open " and close " are STRING; content is GSTRING_CONTENT
         val dquoteQuotes = stringTokens.filter { it.first == "\"" }
         assertEquals(2, dquoteQuotes.size)
-        val contentToken = tokens.find { it.second == JenkinsTokenTypes.GSTRING_CONTENT && it.first.contains("Jenkins") }
-        assertEquals("Jenkins", contentToken?.first)
+        val dquoteContent = tokens.find { it.second == JenkinsTokenTypes.GSTRING_CONTENT && it.first == "Jenkins" }
+        assertEquals("Jenkins", dquoteContent?.first)
     }
 
     @Test
@@ -300,9 +302,9 @@ class JenkinsLexerTest {
         assertEquals(1, endTokens.size)
         assertEquals("}", endTokens[0].first)
 
-        // 'env' is a plain identifier; the variable name after env. is ENV_VAR
+        // 'env' after ${ is ENV_VAR; 'VER' after env. is also ENV_VAR
         val envToken = tokens.find { it.first == "env" }
-        assertEquals(JenkinsTokenTypes.IDENTIFIER, envToken?.second)
+        assertEquals(JenkinsTokenTypes.ENV_VAR, envToken?.second)
         val verToken = tokens.find { it.first == "VER" }
         assertEquals(JenkinsTokenTypes.ENV_VAR, verToken?.second)
     }
