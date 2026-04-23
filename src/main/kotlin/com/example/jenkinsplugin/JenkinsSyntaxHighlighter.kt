@@ -6,8 +6,6 @@ import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.openapi.fileTypes.SyntaxHighlighterBase
 import com.intellij.psi.tree.IElementType
 import com.intellij.openapi.editor.HighlighterColors
-import com.intellij.openapi.editor.markup.TextAttributes
-import java.awt.Color
 
 class JenkinsSyntaxHighlighter : SyntaxHighlighterBase() {
 
@@ -79,9 +77,10 @@ class JenkinsSyntaxHighlighter : SyntaxHighlighterBase() {
         )
 
         // env keyword and env.VARNAME — teal (#4EC9B0), readable in dark and light themes
-        private val ENV_COLOR = TextAttributes(Color(0x4E, 0xC9, 0xB0), null, null, null, 0)
-
-        val ENV_VAR: TextAttributesKey = TextAttributesKey.createTextAttributesKey("JENKINS_ENV_VAR", ENV_COLOR)
+        val ENV_VAR = TextAttributesKey.createTextAttributesKey(
+            "JENKINS_ENV_VAR",
+            DefaultLanguageHighlighterColors.METADATA
+        )
 
         val STRING = TextAttributesKey.createTextAttributesKey(
             "JENKINS_STRING",
