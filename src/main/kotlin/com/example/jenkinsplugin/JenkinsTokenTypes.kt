@@ -21,6 +21,10 @@ object JenkinsTokenTypes {
 
     // General tokens
     val STRING = IElementType("JENKINS_STRING", JenkinsLanguage.INSTANCE)
+    val GSTRING_CONTENT = IElementType("JENKINS_GSTRING_CONTENT", JenkinsLanguage.INSTANCE)
+    val STRING_INTERPOLATION_START = IElementType("JENKINS_STRING_INTERPOLATION_START", JenkinsLanguage.INSTANCE)
+    val STRING_INTERPOLATION_CONTENT = IElementType("JENKINS_STRING_INTERPOLATION_CONTENT", JenkinsLanguage.INSTANCE)
+    val STRING_INTERPOLATION_END = IElementType("JENKINS_STRING_INTERPOLATION_END", JenkinsLanguage.INSTANCE)
     val REGEX = IElementType("JENKINS_REGEX", JenkinsLanguage.INSTANCE)
     val COMMENT = IElementType("JENKINS_COMMENT", JenkinsLanguage.INSTANCE)
     val NUMBER = IElementType("JENKINS_NUMBER", JenkinsLanguage.INSTANCE)

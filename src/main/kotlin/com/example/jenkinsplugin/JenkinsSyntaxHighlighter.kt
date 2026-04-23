@@ -81,6 +81,16 @@ class JenkinsSyntaxHighlighter : SyntaxHighlighterBase() {
             DefaultLanguageHighlighterColors.STRING
         )
 
+        val GSTRING_CONTENT = TextAttributesKey.createTextAttributesKey(
+            "JENKINS_GSTRING_CONTENT",
+            DefaultLanguageHighlighterColors.STRING
+        )
+
+        val STRING_INTERPOLATION = TextAttributesKey.createTextAttributesKey(
+            "JENKINS_STRING_INTERPOLATION",
+            DefaultLanguageHighlighterColors.VALID_STRING_ESCAPE
+        )
+
         val REGEX = TextAttributesKey.createTextAttributesKey(
             "JENKINS_REGEX",
             DefaultLanguageHighlighterColors.VALID_STRING_ESCAPE
@@ -148,6 +158,8 @@ class JenkinsSyntaxHighlighter : SyntaxHighlighterBase() {
         private val OPTION_KEYWORD_KEYS = arrayOf(OPTION_KEYWORD)
         private val BOOLEAN_LITERAL_KEYS = arrayOf(BOOLEAN_LITERAL)
         private val STRING_KEYS = arrayOf(STRING)
+        private val GSTRING_CONTENT_KEYS = arrayOf(GSTRING_CONTENT)
+        private val STRING_INTERPOLATION_KEYS = arrayOf(STRING_INTERPOLATION)
         private val REGEX_KEYS = arrayOf(REGEX)
         private val COMMENT_KEYS = arrayOf(COMMENT)
         private val NUMBER_KEYS = arrayOf(NUMBER)
@@ -180,6 +192,10 @@ class JenkinsSyntaxHighlighter : SyntaxHighlighterBase() {
             JenkinsTokenTypes.OPTION_KEYWORD -> OPTION_KEYWORD_KEYS
             JenkinsTokenTypes.BOOLEAN_LITERAL -> BOOLEAN_LITERAL_KEYS
             JenkinsTokenTypes.STRING -> STRING_KEYS
+            JenkinsTokenTypes.GSTRING_CONTENT -> GSTRING_CONTENT_KEYS
+            JenkinsTokenTypes.STRING_INTERPOLATION_START,
+            JenkinsTokenTypes.STRING_INTERPOLATION_CONTENT,
+            JenkinsTokenTypes.STRING_INTERPOLATION_END -> STRING_INTERPOLATION_KEYS
             JenkinsTokenTypes.REGEX -> REGEX_KEYS
             JenkinsTokenTypes.COMMENT -> COMMENT_KEYS
             JenkinsTokenTypes.NUMBER -> NUMBER_KEYS

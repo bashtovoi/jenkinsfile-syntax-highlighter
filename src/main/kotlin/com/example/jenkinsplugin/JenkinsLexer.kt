@@ -12,6 +12,12 @@ class JenkinsLexer : LexerBase() {
     private var tokenStart: Int = 0
     private var tokenEnd: Int = 0
 
+    // Lexer state for string interpolation
+    private enum class State { NORMAL, IN_DQUOTE_STRING, IN_TRIPLE_DQUOTE_STRING, IN_INTERPOLATION }
+    private var state: State = State.NORMAL
+    private var interpolationDepth: Int = 0  // brace nesting inside ${}
+    private var stringCloseQuote: String = ""  // " or """
+
     companion object {
         // Category 0: Groovy Language Keywords
         private val GROOVY_KEYWORDS = setOf(
@@ -147,6 +153,8 @@ class JenkinsLexer : LexerBase() {
         this.currentOffset = startOffset
         this.tokenStart = startOffset
         this.tokenEnd = startOffset
+        this.state = State.NORMAL
+        this.interpolationDepth = 0
         advance()
     }
 
@@ -165,6 +173,20 @@ class JenkinsLexer : LexerBase() {
         }
 
         tokenStart = currentOffset
+
+        // Delegate to state-specific handlers before the general dispatch
+        when (state) {
+            State.IN_DQUOTE_STRING, State.IN_TRIPLE_DQUOTE_STRING -> {
+                advanceInDoubleQuotedString()
+                return
+            }
+            State.IN_INTERPOLATION -> {
+                advanceInInterpolation()
+                return
+            }
+            State.NORMAL -> { /* fall through to general dispatch below */ }
+        }
+
         val char = buffer[currentOffset]
 
         when {
@@ -229,35 +251,15 @@ class JenkinsLexer : LexerBase() {
                 tokenType = JenkinsTokenTypes.STRING
             }
             char == '"' -> {
-                // Check for triple-quoted string """
+                // Emit the opening quote(s) as STRING, then switch to string state
                 if (currentOffset + 2 < endOffset &&
                     buffer[currentOffset + 1] == '"' &&
                     buffer[currentOffset + 2] == '"') {
-                    // Triple-quoted string
                     currentOffset += 3
-                    while (currentOffset + 2 < endOffset) {
-                        if (buffer[currentOffset] == '"' &&
-                            buffer[currentOffset + 1] == '"' &&
-                            buffer[currentOffset + 2] == '"') {
-                            currentOffset += 3
-                            break
-                        }
-                        currentOffset++
-                    }
-                    // If we didn't find closing triple quotes, consume to end
-                    if (currentOffset + 2 >= endOffset) {
-                        currentOffset = endOffset
-                    }
+                    state = State.IN_TRIPLE_DQUOTE_STRING
                 } else {
-                    // Double-quoted string
                     currentOffset++
-                    while (currentOffset < endOffset) {
-                        if (buffer[currentOffset] == '"' && (currentOffset == 0 || buffer[currentOffset - 1] != '\\')) {
-                            currentOffset++
-                            break
-                        }
-                        currentOffset++
-                    }
+                    state = State.IN_DQUOTE_STRING
                 }
                 tokenEnd = currentOffset
                 tokenType = JenkinsTokenTypes.STRING
@@ -404,6 +406,94 @@ class JenkinsLexer : LexerBase() {
             }
         }
     }
+
+    private fun advanceInDoubleQuotedString() {
+        val triple = state == State.IN_TRIPLE_DQUOTE_STRING
+        if (currentOffset >= endOffset) {
+            tokenType = null
+            return
+        }
+        // Check for interpolation start ${
+        if (currentOffset + 1 < endOffset &&
+            buffer[currentOffset] == '$' && buffer[currentOffset + 1] == '{') {
+            currentOffset += 2
+            tokenEnd = currentOffset
+            tokenType = JenkinsTokenTypes.STRING_INTERPOLATION_START
+            returnStringState = state
+            state = State.IN_INTERPOLATION
+            interpolationDepth = 1
+            return
+        }
+        // Check for closing quote(s)
+        if (triple) {
+            if (currentOffset + 2 < endOffset &&
+                buffer[currentOffset] == '"' &&
+                buffer[currentOffset + 1] == '"' &&
+                buffer[currentOffset + 2] == '"') {
+                currentOffset += 3
+                tokenEnd = currentOffset
+                tokenType = JenkinsTokenTypes.STRING
+                state = State.NORMAL
+                return
+            }
+        } else {
+            if (buffer[currentOffset] == '"' && (currentOffset == 0 || buffer[currentOffset - 1] != '\\')) {
+                currentOffset++
+                tokenEnd = currentOffset
+                tokenType = JenkinsTokenTypes.STRING
+                state = State.NORMAL
+                return
+            }
+        }
+        // Consume string content up to next ${ or closing quote
+        while (currentOffset < endOffset) {
+            if (currentOffset + 1 < endOffset &&
+                buffer[currentOffset] == '$' && buffer[currentOffset + 1] == '{') break
+            if (triple) {
+                if (currentOffset + 2 < endOffset &&
+                    buffer[currentOffset] == '"' &&
+                    buffer[currentOffset + 1] == '"' &&
+                    buffer[currentOffset + 2] == '"') break
+            } else {
+                if (buffer[currentOffset] == '"' && (currentOffset == 0 || buffer[currentOffset - 1] != '\\')) break
+            }
+            currentOffset++
+        }
+        // Unterminated string: consume to end
+        if (currentOffset >= endOffset) {
+            state = State.NORMAL
+        }
+        tokenEnd = currentOffset
+        // String literal content between interpolations gets its own token type so
+        // the highlighter can color it consistently with the surrounding GString.
+        tokenType = JenkinsTokenTypes.GSTRING_CONTENT
+    }
+
+    private fun advanceInInterpolation() {
+        if (currentOffset >= endOffset) {
+            tokenType = null
+            return
+        }
+        // Use normal lexer logic for tokens inside the interpolation
+        val savedState = state
+        state = State.NORMAL
+        advance()
+        state = savedState
+
+        // Adjust brace depth and detect the closing } that ends interpolation
+        if (tokenType == JenkinsTokenTypes.LBRACE) {
+            interpolationDepth++
+        } else if (tokenType == JenkinsTokenTypes.RBRACE) {
+            interpolationDepth--
+            if (interpolationDepth == 0) {
+                tokenType = JenkinsTokenTypes.STRING_INTERPOLATION_END
+                state = returnStringState
+            }
+        }
+    }
+
+    // Tracks which string state to return to after interpolation closes
+    private var returnStringState: State = State.NORMAL
 
     override fun getBufferSequence(): CharSequence = buffer
 

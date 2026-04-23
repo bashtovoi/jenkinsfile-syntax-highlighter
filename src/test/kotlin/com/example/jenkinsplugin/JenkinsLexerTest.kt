@@ -243,9 +243,14 @@ class JenkinsLexerTest {
         assertEquals(2, commentTokens.size)
 
         val stringTokens = tokens.filter { it.second == JenkinsTokenTypes.STRING }
-        assertEquals(2, stringTokens.size)
-        assertEquals("\"Jenkins\"", stringTokens[0].first)
-        assertEquals("'build.sh'", stringTokens[1].first)
+        val squoteToken = stringTokens.first { it.first == "'build.sh'" }
+        assertEquals("'build.sh'", squoteToken.first)
+
+        // Double-quoted strings: open " and close " are STRING; content is GSTRING_CONTENT
+        val dquoteQuotes = stringTokens.filter { it.first == "\"" }
+        assertEquals(2, dquoteQuotes.size)
+        val contentToken = tokens.find { it.second == JenkinsTokenTypes.GSTRING_CONTENT && it.first.contains("Jenkins") }
+        assertEquals("Jenkins", contentToken?.first)
     }
 
     @Test
@@ -281,6 +286,42 @@ class JenkinsLexerTest {
         assertEquals(2, regexTokens.size)
         assertEquals("/test.*/", regexTokens[0].first)
         assertEquals("~/test.*/", regexTokens[1].first)
+    }
+
+    @Test
+    fun testStringInterpolation() {
+        val input = "\"${"\$"}{env.VER}-SNAPSHOT\""
+        val tokens = tokenize(input)
+
+        val startTokens = tokens.filter { it.second == JenkinsTokenTypes.STRING_INTERPOLATION_START }
+        val endTokens = tokens.filter { it.second == JenkinsTokenTypes.STRING_INTERPOLATION_END }
+        assertEquals(1, startTokens.size)
+        assertEquals("\${", startTokens[0].first)
+        assertEquals(1, endTokens.size)
+        assertEquals("}", endTokens[0].first)
+
+        // Content inside interpolation should not be STRING type
+        val envToken = tokens.find { it.first == "env" }
+        assertEquals(JenkinsTokenTypes.IDENTIFIER, envToken?.second)
+    }
+
+    @Test
+    fun testStringInterpolationMultiple() {
+        val input = "\"${"\$"}{env.VER}-SNAPSHOT-${"\$"}{env.GIT_COMMIT}\""
+        val tokens = tokenize(input)
+
+        println("Token dump for: $input")
+        tokens.forEach { println("  [${it.second}] '${it.first}'") }
+
+        val startTokens = tokens.filter { it.second == JenkinsTokenTypes.STRING_INTERPOLATION_START }
+        val endTokens = tokens.filter { it.second == JenkinsTokenTypes.STRING_INTERPOLATION_END }
+        assertEquals(2, startTokens.size)
+        assertEquals(2, endTokens.size)
+
+        // The literal text between interpolations must be GSTRING_CONTENT (not plain STRING)
+        // so the highlighter can color it consistently with the surrounding double-quoted string.
+        val snapshotToken = tokens.find { it.first == "-SNAPSHOT-" }
+        assertEquals(JenkinsTokenTypes.GSTRING_CONTENT, snapshotToken?.second)
     }
 
     @Test
