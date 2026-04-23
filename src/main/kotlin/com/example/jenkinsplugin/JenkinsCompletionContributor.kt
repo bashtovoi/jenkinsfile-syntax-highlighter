@@ -30,6 +30,11 @@ class JenkinsCompletionContributor : CompletionContributor() {
                 return
             }
 
+            if (isAfterParamsDot(text, offset)) {
+                addParamVariables(result, text)
+                return
+            }
+
             addKeywords(result)
         }
 
@@ -65,6 +70,57 @@ class JenkinsCompletionContributor : CompletionContributor() {
                     )
                 }
             }
+        }
+
+        private fun isAfterParamsDot(text: String, offset: Int): Boolean {
+            var pos = offset - 1
+            while (pos >= 0 && (text[pos].isLetterOrDigit() || text[pos] == '_')) pos--
+            return pos >= 6 &&
+                text[pos] == '.' &&
+                text[pos - 1] == 's' &&
+                text[pos - 2] == 'm' &&
+                text[pos - 3] == 'a' &&
+                text[pos - 4] == 'r' &&
+                text[pos - 5] == 'a' &&
+                text[pos - 6] == 'p'
+        }
+
+        private fun addParamVariables(result: CompletionResultSet, fileText: String) {
+            collectLocalParams(fileText).forEach { name ->
+                result.addElement(
+                    LookupElementBuilder.create(name)
+                        .withTypeText("pipeline parameter")
+                        .withBoldness(true)
+                )
+            }
+        }
+
+        // Extracts name values from parameter declarations inside parameters { } blocks.
+        // Matches: string(name: 'FOO', ...), booleanParam(name: 'BAR', ...), etc.
+        private fun collectLocalParams(text: String): List<String> {
+            val result = mutableListOf<String>()
+            var inParamsBlock = false
+            var braceDepth = 0
+
+            for (line in text.lines()) {
+                val trimmed = line.trim()
+                if (!inParamsBlock) {
+                    if (trimmed.startsWith("parameters") && trimmed.contains("{")) {
+                        inParamsBlock = true
+                        braceDepth = 1
+                    }
+                } else {
+                    braceDepth += trimmed.count { it == '{' }
+                    braceDepth -= trimmed.count { it == '}' }
+                    if (braceDepth <= 0) {
+                        inParamsBlock = false
+                        continue
+                    }
+                    val match = PARAM_NAME_DECL.find(trimmed)
+                    if (match != null) result.add(match.groupValues[1])
+                }
+            }
+            return result
         }
 
         // Extracts VARNAME from lines like `VARNAME = "..."` inside environment { } blocks
@@ -199,6 +255,8 @@ class JenkinsCompletionContributor : CompletionContributor() {
 
         companion object {
             private val ENV_VAR_DECL = Regex("""^([A-Z][A-Z0-9_]*)\s*=\s*""")
+            // Matches name: 'FOO' or name: "FOO" inside a parameter declaration
+            private val PARAM_NAME_DECL = Regex("""name\s*:\s*['"]([^'"]+)['"]""")
 
             // Jenkins built-in environment variables
             // Source: https://www.jenkins.io/doc/book/pipeline/jenkinsfile/#using-environment-variables

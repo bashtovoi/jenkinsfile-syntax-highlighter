@@ -325,7 +325,7 @@ class JenkinsLexer : LexerBase() {
                 val text = buffer.substring(tokenStart, tokenEnd)
 
                 tokenType = when {
-                    isPrecededByEnvDot(tokenStart) -> JenkinsTokenTypes.ENV_VAR
+                    isPrecededByEnvDot(tokenStart) || isPrecededByParamsDot(tokenStart) -> JenkinsTokenTypes.ENV_VAR
                     text in GROOVY_KEYWORDS -> JenkinsTokenTypes.GROOVY_KEYWORD
                     text in PIPELINE_STRUCTURE_KEYWORDS -> JenkinsTokenTypes.PIPELINE_STRUCTURE
                     text in STAGE_KEYWORDS -> JenkinsTokenTypes.STAGE_KEYWORD
@@ -415,17 +415,20 @@ class JenkinsLexer : LexerBase() {
         }
     }
 
-    // Returns true if the character immediately before `pos` is '.' preceded by "env"
-    // (with no other identifier chars between). This lets us detect env.VAR purely
-    // from the buffer without any cross-token state.
     private fun isPrecededByEnvDot(pos: Int): Boolean {
-        if (pos < 4) return false          // need at least "env."
-        if (buffer[pos - 1] != '.') return false
-        // chars at pos-4, pos-3, pos-2 must be 'e','n','v'
         if (pos < 4) return false
+        if (buffer[pos - 1] != '.') return false
         if (buffer[pos - 4] != 'e' || buffer[pos - 3] != 'n' || buffer[pos - 2] != 'v') return false
-        // the char before 'e' must not be an identifier char (so "myenv.X" is excluded)
         val before = pos - 5
+        return before < 0 || (!buffer[before].isLetterOrDigit() && buffer[before] != '_')
+    }
+
+    private fun isPrecededByParamsDot(pos: Int): Boolean {
+        if (pos < 7) return false
+        if (buffer[pos - 1] != '.') return false
+        if (buffer[pos - 7] != 'p' || buffer[pos - 6] != 'a' || buffer[pos - 5] != 'r' ||
+            buffer[pos - 4] != 'a' || buffer[pos - 3] != 'm' || buffer[pos - 2] != 's') return false
+        val before = pos - 8
         return before < 0 || (!buffer[before].isLetterOrDigit() && buffer[before] != '_')
     }
 
