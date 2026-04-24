@@ -247,6 +247,8 @@ jobs:
           if match:
               # Has triple-quoted format
               existing = match.group(2).strip()
+              # Escape $ signs so Kotlin doesn't try to interpolate them
+              new_changelog = new_changelog.replace('$', "${'$'}")
               if existing:
                   updated = new_changelog + existing
               else:
