@@ -11,8 +11,9 @@ class JenkinsSyntaxHighlighter : SyntaxHighlighterBase() {
 
     companion object {
         // Category 0: Groovy Language Keywords - Purple/Keyword (def, if, else, for, etc.)
+        // Uses a plugin-namespaced name to avoid colliding with the Groovy plugin's own "GROOVY_KEYWORD" registration
         val GROOVY_KEYWORD = TextAttributesKey.createTextAttributesKey(
-            "GROOVY_KEYWORD",
+            "JENKINS_GROOVY_KEYWORD",
             DefaultLanguageHighlighterColors.KEYWORD
         )
 

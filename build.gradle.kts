@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.github.valerii"
-version = "1.0.0"
+version = "1.1.1"
 
 repositories {
     mavenCentral()
@@ -38,6 +38,15 @@ intellijPlatform {
         }
 
         changeNotes = """
+            <h3>1.1.1</h3>
+            <ul>
+                <li><b>Bug Fixes</b>
+                    <ul>
+                        <li>Fix IllegalStateException on startup caused by TextAttributesKey name collision with Groovy plugin (<a href="https://github.com/bashtovoi/jenkinsfile-syntax-highlighter/issues/3">#3</a>)</li>
+                    </ul>
+                </li>
+            </ul>
+
             <h3>1.0.6</h3>
             <ul>
                 <li><b>New Features</b>
