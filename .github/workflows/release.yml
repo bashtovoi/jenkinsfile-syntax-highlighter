@@ -53,6 +53,7 @@ jobs:
 
       - name: Generate changelogs (HTML + Markdown)
         id: generate_changelog
+        shell: bash
         run: |
           # Get the previous tag
           PREVIOUS_TAG=$(git tag --sort=-creatordate | grep -v "^${{ github.ref_name }}$" | head -n 1)
