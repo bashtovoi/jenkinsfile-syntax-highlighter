@@ -47,6 +47,34 @@ intellijPlatform {
                 </li>
             </ul>
 
+            <h3>1.1.0</h3>
+            <ul>
+                <li><b>New Features</b>
+                    <ul>
+                        <li>Highlight ${'$'}varName bare variable references in strings</li>
+                        <li>Highlight ${'$'}{VARNAME} interpolations with teal color</li>
+                        <li>Add params.PARAM autocomplete and highlighting</li>
+                        <li>Highlight env.VARNAME with distinct color</li>
+                        <li>Add env.* autocomplete for built-in and local environment variables</li>
+                        <li>Highlight Groovy string interpolation in double-quoted strings</li>
+                    </ul>
+                </li>
+                <li><b>Bug Fixes</b>
+                    <ul>
+                        <li>Escape dollar signs in changeNotes to prevent Kotlin interpolation errors</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h3>1.0.7</h3>
+            <ul>
+                <li><b>CI/CD</b>
+                    <ul>
+                        <li>Fix changelog generation flow</li>
+                    </ul>
+                </li>
+            </ul>
+
             <h3>1.0.6</h3>
             <ul>
                 <li><b>New Features</b>
